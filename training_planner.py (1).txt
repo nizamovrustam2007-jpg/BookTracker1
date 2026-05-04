@@ -1,0 +1,87 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+import os
+from datetime import datetime
+
+DATA_FILE = 'favorites.json'
+
+class TrainingPlannerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Training Planner")
+        self.create_widgets()
+        self.load_data()
+        self.update_table()
+
+    def create_widgets(self):
+        # Поля ввода
+        ttk.Label(self.root, text="Дата (ГГГГ-ММ-ДД):").grid(row=0, column=0, padx=5, pady=5)
+        self.date_entry = ttk.Entry(self.root)
+        self.date_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        ttk.Label(self.root, text="Тип тренировки:").grid(row=1, column=0, padx=5, pady=5)
+        self.type_entry = ttk.Entry(self.root)
+        self.type_entry.grid(row=1, column=1, padx=5, pady=5)
+
+        ttk.Label(self.root, text="Длительность (мин):").grid(row=2, column=0, padx=5, pady=5)
+        self.duration_entry = ttk.Entry(self.root)
+        self.duration_entry.grid(row=2, column=1, padx=5, pady=5)
+
+        # Кнопка добавления
+        ttk.Button(self.root, text="Добавить тренировку", command=self.add_training).grid(row=3, column=0, columnspan=2, pady=10)
+
+        # Таблица
+        self.tree = ttk.Treeview(self.root, columns=("date", "type", "duration"), show='headings')
+        self.tree.heading("date", text="Дата")
+        self.tree.heading("type", text="Тип")
+        self.tree.heading("duration", text="Длительность")
+        self.tree.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+
+    def load_data(self):
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+                self.data = json.load(f)
+        else:
+            self.data = []
+
+    def save_data(self):
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=4)
+
+    def update_table(self):
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+        for item in self.data:
+            self.tree.insert("", tk.END, values=(item['date'], item['type'], item['duration']))
+
+    def add_training(self):
+        date = self.date_entry.get()
+        tr_type = self.type_entry.get()
+        duration = self.duration_entry.get()
+
+        # Валидация даты
+        try:
+            datetime.strptime(date, '%Y-%m-%d')
+        except ValueError:
+            messagebox.showerror("Ошибка", "Дата должна быть в формате ГГГГ-ММ-ДД")
+            return
+
+        # Валидация длительности
+        try:
+            duration = int(duration)
+            if duration <= 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror("Ошибка", "Длительность должна быть положительным числом")
+            return
+
+        # Добавление записи
+        self.data.append({"date": date, "type": tr_type, "duration": duration})
+        self.save_data()
+        self.update_table()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = TrainingPlannerApp(root)
+    root.mainloop()
